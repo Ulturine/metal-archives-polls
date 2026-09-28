@@ -6,6 +6,10 @@ __pycache__/
 # C extensions
 *.so
 
+# GVim files
+.*.sw?
+*~
+
 # Distribution / packaging
 .Python
 build/

@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html>
+  
+<head>
+
+<title>Metal Archives Top 10 Albums Poll Results YYYY</title>
+
+<style type="text/css">
+
+body {
+    color: #c2b8af;
+    background-color: black;
+    margin: 30px;
+    margin-top: 10px;
+}
+
+h2 {
+  color: #ad6854;
+}
+
+div.container_header {
+  border-style: none none solid none;
+  border-width: 1px;
+  border-color: #3e0b0a;
+  color: #ad6854; /* rgb(173, 104, 84); #C2B8AF; */
+  background-color: black; /* #3E0B0A; */
+  text-align: center;
+}
+
+div.results_container {
+  display: grid;
+  grid-template-rows: 50px 40px;
+  grid-template-columns: 70px 640px 70px;
+  color: #ad6854;
+  width: 780px;
+  overflow: hidden;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 6px;
+  border-color: #3e0b0a;
+  background-color: #110107
+}
+
+p.pos_label {
+  text-align: center;
+}
+
+div.album {
+  height: 35px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  width: 705px;
+  top: 400px;
+  left: 0px;
+  position: absolute;
+  color: #c2b8af;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 6px;
+  border-color: #3e0b0a;
+  display: flex;
+  align-items: center;
+  transition: left .5s ease-in, top 2.0s ease-in, background-color 2.0s ease-in, background-image 2.0s ease-in, opacity 2.0s ease-in;
+}
+
+.album .title {
+  flex: 640;
+  margin-left: 5px;
+}
+
+.album .points {
+  flex: 70;
+  text-align: center;
+}
+
+</style>
+
+</head>
+ 
+<body>
+
+  <h2>Metal Archives Top 10 Albums Poll Results YYYY</h2>
+
+  <div class="results_container" id="results_container" >
+    <div class="container_header"><p><b>Place</b></p></div>
+    <div class="container_header"><p><b>Album</b></p></div>
+    <div class="container_header"><p><b>Points</b></p></div>
+
+    <!-- First result empty grid item for getting reference position -->
+    <div id="reference" style="grid-row: 2; grid-column: 2; display: inline"></div>
+  </div>
+
+  <div id="spacer"></br></div>
+  <div class="slidecontainer" style="display: flex; width: 780px" >
+    <button style="margin-right: 5px" onclick="rewind()">⏮</button> 
+    <button id="toggle_play" style="margin-right: 5px" onclick="togglePlay()">▶</button> 
+
+    <input id="day_in_poll" type="range" style="width: 400px" oninput="onSlide()">
+    <div id="poll_day" style="margin-left: 10px">None</div>
+    <div id="ballot_count" style="margin-left: auto;">nnn ballots</div>
+  </div>
+
+  <!-- Testing stuff -->
+  <div style="display: none">
+    <div id="spacer"></br></div>
+    <div id="spacer"></br></div>
+    <button onclick="create()">Create</button> 
+    <button onclick="nextDay()">Next Day</button> 
+    <button onclick="orderItems()">Order</button> 
+    <button onclick="randomise()">Randomise</button> 
+  </div>
+
+</body>
+
+<script>
+
+const itemCount = 20;
+const itemCountPrimary = 10; // Others will be low opacity
+const itemHeight = 40;
+const itemWidth = 660;
+const itemMargin = 5;
+var   currentDay = -1;
+var   playing = false;
+var   playTimer;
+const transitionMs = 2000;
+const transitionDelayMs = 400;
+
+const maTextHeadingColour = 0xad6854;
+const maTextBodyColour = 0xc2b8af;
+const maTextInfoColour = 0x838b98;
+const maBorderColour = 0x3e0b0a;
+const maBoxBackgroundColour1 = 0x110107;
+const maBoxBackgroundColour2 = 0x101010;
+
+const topColour = 0xffd700; // parseInt( 'ffd700', 16 );
+const bottomColour = 0x996515; // parseInt( '996515', 16 );
+
+const topThreeTextColour = 0x191919;
+
+const goldColour = 0xe5b80b; // 0xedc531;
+const goldColour1 = 0xfad643;
+const goldColour2 = 0xedc531;
+const goldColour3 = 0xd4af37;
+
+const silverColour = 0xc4c4c4; // 0xc0c0c0; // 0xd8d8d8;
+const silverColour1 = 0xc4c4c4; // 0xc0c0c0; // 0xd8d8d8;
+const silverColour2 = 0xc4c4c4; // 0xc0c0c0; // 0xd8d8d8;
+const silverColour3 = 0xc0c0c0; // 0xc0c0c0; // 0xd8d8d8;
+
+const bronzeColour1 = 0xce8946
+const bronzeColour2 = 0xce8946
+const bronzeColour3 = 0x9f7a34
+
+const bronzeStartColour = 0xce8946
+const bronzeEndColour = 0x804a00;
+
+
+// Create container and album boxes
+function create()
+{
+    createContainer();
+    createItemBoxes();
+}
+
+// Order albums based on points 
+function orderItems()
+{
+    setBoxPositions();
+}
+
+// Assign points 1 - 10 to random box items
+function randomise()
+{
+    // Init choices
+    var choices = new Array();
+    for( let i = 0; i < 2 * itemCount; i++)
+    {
+        choices[ i ] = i + 1;
+    }
+    // Array.from({length: 40}, () => Math.floor(Math.random() * 40));
+
+    for( let i = 0; i < 2 * itemCount; i++)
+    {
+        var box = document.getElementById( 'box' + ( i + 1 ).toString() );
+        box.setAttribute( 'data-pos', itemCount + 1 );
+        var ps = box.querySelectorAll( 'p' );
+        ps[ 1 ].innerHTML = "";
+    }
+
+    // Choose itemCount items from the 2 * itemCount choices
+    for( let i = 0; i < itemCount; i++)
+    {
+        var idx = Math.floor( Math.random() * ( itemCount * 2 - i ) );
+        var boxNum = choices[ idx ];
+        choices.splice( idx, 1 ); // Remove chosen item
+
+        // Set box position rank and display text
+        var box = document.getElementById( 'box' + boxNum );
+        box.setAttribute( 'data-pos', i + 1 );
+        var ps = box.querySelectorAll( 'p' );
+        ps[ 1 ].innerHTML = i + 1; // Should properly randomise but then have to sort
+    }
+}
+
+// Play/pause toggle
+function togglePlay()
+{
+    var btn = document.getElementById( 'toggle_play' );
+    if( playing )
+    {
+        clearTimeout( playTimer );
+        btn.innerHTML = "▶";
+    }
+    else
+    {
+        playTimer = setTimeout( playNextDay, 100 ); // Do first one straight away
+        btn.innerHTML = "⏸";
+    }
+    playing = !playing;
+}
+
+// Rewind to start of results
+function rewind()
+{
+    setDay( 0 );
+    if( playing )
+    {
+        // Restart playing
+        clearTimeout( playTimer );
+        playTimer = setTimeout( playNextDay, 100 );
+    }
+    else
+    {
+        setBoxPositions();
+    }
+}
+
+// Timer function to advance to next day
+function playNextDay()
+{
+    if( playing && currentDay < poll_results.length - 1 ) // Double-check
+    {
+        nextDay();
+        setBoxPositions();
+        playTimer = setTimeout( playNextDay, transitionMs + transitionDelayMs );
+    }
+    else
+    {
+        playing = false;
+        var btn = document.getElementById( 'toggle_play' );
+        btn.innerHTML = "▶";
+    }
+}
+
+// Helper function to get an element's exact position
+function getPosition( el )
+{
+    var xPos = 0;
+    var yPos = 0;
+ 
+    while( el )
+    {
+        if( el.tagName == "BODY" )
+        {
+            // deal with browser quirks with body/window/document and page scroll
+            var xScroll = el.scrollLeft || document.documentElement.scrollLeft;
+            var yScroll = el.scrollTop || document.documentElement.scrollTop;
+ 
+            xPos += (el.offsetLeft - xScroll + el.clientLeft);
+            yPos += (el.offsetTop - yScroll + el.clientTop);
+        }
+        else
+        {
+            // for all other non-BODY elements
+            xPos += (el.offsetLeft - el.scrollLeft + el.clientLeft);
+            yPos += (el.offsetTop - el.scrollTop + el.clientTop);
+        }
+ 
+        el = el.offsetParent;
+    }
+
+    return { x: xPos, y: yPos };
+}
+
+// Convert a number to a #hexcolor string
+function numToColour( num )
+{
+    return "#" + ( num & 0x00FFFFFF ).toString( 16 ).padStart( 6, '0' )
+}
+
+// Create album container
+function createContainer()
+{
+    // Set grid row repeats for results
+    var cont = document.getElementById( 'results_container' );
+    cont.style.gridTemplateRows = "50px repeat( " + itemCount + ", 40px ) 45px";
+
+    // Create position ranks
+    for( let i = 0; i < itemCount; i++)
+    {
+        const p = document.createElement( "p" );
+        p.setAttribute( 'class', 'pos_label' );
+        p.style.gridRow = i + 2;
+        p.style.gridColumn = 1;
+        p.innerHTML = i + 1;
+        cont.appendChild( p );
+    }
+
+    // Create black bar for extra final row to hide items
+    const blk = document.createElement( "div" );
+    blk.style.gridRow = ( itemCount + 2 ) + " / " + ( itemCount + 3 );
+    blk.style.gridColumn = "1 / 4";
+    blk.style.backgroundColor = 'black';
+    cont.appendChild( blk );
+
+    // Set up slider range based on result size
+    var slider = document.getElementById( "day_in_poll" );
+    slider.min = slider.value = 0;
+    slider.max = poll_results.length - 1;
+}
+
+// Create album boxes
+function createItemBoxes()
+{
+    // Need double the ranking in (unlikely) case of all new results
+    for( let i = 0; i < 2 * itemCount; i++)
+    {
+        const ib = document.createElement("div");
+        ib.setAttribute( 'class', 'album' );
+        ib.setAttribute( 'data-pos', Math.min( i + 1, itemCount + 1 ) );
+        ib.id = "box" + ( i + 1 );
+        ib.style.opacity = 0;
+
+        var p = document.createElement("p");
+        p.setAttribute( 'class', 'title' );
+        p.innerHTML = "Album " + "ABCDEFGHIJKLMNOPQRSTUVWXYZ".substr( i, 1 );
+        ib.appendChild( p );
+
+        p = document.createElement("p");
+        p.setAttribute( 'class', 'points' );
+        p.innerHTML = ( Math.floor( Math.random() * 2000 ) + 1 );
+        ib.appendChild( p );
+
+        document.body.appendChild( ib );
+    }
+
+    setDay( 0 );
+    setBoxPositions();
+}
+
+// Place items based on their rank
+function setBoxPositions()
+{
+    // Get reference position
+    var ref = document.getElementById( 'reference' );
+    var refPos = getPosition( ref ); // This does not do what we want, just use ref.offsetTop
+    // console.log( ref.offsetLeft + ', ' + ref.offsetTop + ' => ' + refPos.x + ', ' + refPos.y );
+
+    for( let i = 0; i < 2 * itemCount; i++)
+    {
+        var box = document.getElementById( 'box' + ( i + 1 ).toString() );
+        const pos = box.getAttribute( 'data-pos' );
+        box.offsetHeight; // Force reflow so transitions are triggered
+        // box.style.top = ( ( pos - 1 ) * 40 + itemMargin ) + 'px';
+        // box.style.top = ( ( pos - 1 ) * 40 ) + 'px';
+        // box.style.top = ( refPos.y + ( pos - 1 ) * 40 ) + 'px';
+        // box.style.left = refPos.x + 'px';
+        box.style.top = ( ref.offsetTop + ( pos - 1 ) * 40 ) + 'px';
+        box.style.left = ref.offsetLeft + 'px';
+
+        // Note: background image cannot be transitioned without extra tricks, just use background colour
+
+        // Colour
+        if( pos == 1 )
+        {
+            // box.style.backgroundImage = "linear-gradient( to right, " + numToColour( goldColour1 ) + ", " + numToColour( goldColour2 ) + ")";
+            box.style.backgroundColor = numToColour( goldColour1 );
+            box.style.color = numToColour( topThreeTextColour );
+        }
+        else if( pos == 2 )
+        {
+            // box.style.backgroundImage = 'linear-gradient(to right, white, white )';
+            box.style.backgroundColor = numToColour( silverColour3 );
+            box.style.color = numToColour( topThreeTextColour );
+        }
+        else if( pos == 3 )
+        {
+            // box.style.backgroundImage = 'linear-gradient(to right, white, white )';
+            box.style.backgroundColor = numToColour( bronzeColour1 );
+            box.style.color = numToColour( topThreeTextColour );
+        }
+        else
+        {
+            // box.style.backgroundImage = 'linear-gradient(to right, white, white )';
+            box.style.backgroundColor = numToColour( maBoxBackgroundColour2 );
+            box.style.color = numToColour( maTextBodyColour );
+        }
+
+        // Show ranked albums, hide others
+        if( pos >= 1 && pos <= itemCount )
+        {
+            box.style.opacity = pos <= itemCountPrimary ? 1.0 : 0.6;
+        }
+        else
+        {
+            box.style.opacity = 0;
+        }
+    }
+}
+
+// Date slider event
+function onSlide()
+{
+    var slider = document.getElementById("day_in_poll");
+    setDay( slider.value );
+    setBoxPositions();
+}
+
+// Move to next day
+function nextDay()
+{
+    if( currentDay < poll_results.length - 1 )
+    {
+        setDay( currentDay + 1 );
+    }
+}
+
+// Set particular day
+function setDay( day )
+{
+    currentDay = Number( day );
+    var slider = document.getElementById( "day_in_poll" );
+    slider.value = currentDay;
+    if( currentDay >= 0 )
+    {
+        setResults( poll_results[ currentDay ] );
+    }
+    else
+    {
+        // Should not happen
+        var pollDay = document.getElementById("poll_day");
+        pollDay.innerHTML = "Invalid";
+    }
+}
+
+// Apply a set of album results
+function setResults( result_set )
+{
+    var pollday = document.getElementById( 'poll_day' );
+    pollday.innerHTML = result_set.polldate;
+
+    var ballotcount = document.getElementById( 'ballot_count' );
+    ballotcount.innerHTML = result_set.ballots + ( result_set.ballots == 1 ? ' ballot' : ' ballots' );
+
+    // Mark positions of current in-view boxes (for reuse in next stage)
+    for( let i = 0; i < 2 * itemCount; i++)
+    {
+        var box = document.getElementById( 'box' + ( i + 1 ) );
+        if( box.getAttribute( 'data-pos' ) <= itemCount )
+        {
+            box.setAttribute( 'data-pos', -1 );
+        }
+    }
+
+    // Set new vote positions, reuse box if album was previously in-view (data-pos = -1)
+    for( let v = 0; v < itemCount && v < result_set.results.length; v++)
+    {
+        var band_album = result_set.results[ v ].band_album;
+        var points = result_set.results[ v ].points;
+
+        var found = false;
+        for( let b = 0; b < 2 * itemCount && !found; b++)
+        {
+            var box = document.getElementById( 'box' + ( b + 1 ) );
+            if( box.getAttribute( 'data-pos' ) == -1 )
+            {
+                var ps = box.querySelectorAll( 'p' );
+                if( ps[ 0 ].innerHTML == band_album )
+                {
+                    // Found it, album stayed in results, update position and vote count
+                    found = true;
+                    box.setAttribute( 'data-pos', v + 1 );
+                    ps[ 1 ].innerHTML = points;
+                }
+            }
+        }
+
+        if( !found )
+        {
+            // Album is new to results, assigned to out-of-view box 
+            for( let b = 0; b < 2 * itemCount && !found; b++)
+            {
+                var box = document.getElementById( 'box' + ( b + 1 ) );
+                if( box.getAttribute( 'data-pos' ) > itemCount )
+                {
+                    found = true;
+                    box.setAttribute( 'data-pos', v + 1 );
+                    var ps = box.querySelectorAll( 'p' );
+                    ps[ 0 ].innerHTML = band_album;
+                    ps[ 1 ].innerHTML = points;
+                }
+            }
+        }
+    }
+
+    // Set positions of albums that have fallen out of the results (i.e. still -1)
+    for( let b = 0; b < 2 * itemCount; b++)
+    {
+        var box = document.getElementById( 'box' + ( b + 1 ) );
+        if( box.getAttribute( 'data-pos' ) == -1 )
+        {
+            box.setAttribute( 'data-pos', itemCount + 1 );
+            var ps = box.querySelectorAll( 'p' );
+            // Do not blank as want to see the album transition out
+            // ps[ 0 ].innerHTML = '';
+            // ps[ 1 ].innerHTML = '';
+        }
+    }
+}
+
+</script>
+
+
+<script>
+
+const poll_results =
+[
+    { polldate: '',
+      ballots: 0,
+      results: []
+    },
+
+    { polldate: '2nd December 2025',
+      ballots: 3,
+      results:
+        [
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 18 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Tormentor Tyrant - Excessive Escalation of Cruelty', points: 15 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 12 },
+            { band_album: 'Hirax - Faster than Death', points: 12 },
+            { band_album: 'Synaptic - Enter the Void', points: 12 },
+            { band_album: 'Acid Age - Perilous Compulsion', points: 10 },
+            { band_album: 'Pagan Altar - Never Quite Dead', points: 10 },
+            { band_album: 'Queen of Dreams - Subnivium', points: 10 },
+            { band_album: 'Judicator - Concord', points: 8 },
+            { band_album: 'Luminesce - Mirrored', points: 8 },
+            { band_album: 'Phantom - Tyrants of Wrath', points: 8 },
+            { band_album: 'Am I in Trouble? - Spectrum', points: 6 },
+            { band_album: 'Elettra Storm - Evertale', points: 6 }
+        ]
+    },
+    { polldate: '3rd December 2025',
+      ballots: 3,
+      results:
+        [
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 18 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Tormentor Tyrant - Excessive Escalation of Cruelty', points: 15 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 12 },
+            { band_album: 'Hirax - Faster than Death', points: 12 },
+            { band_album: 'Synaptic - Enter the Void', points: 12 },
+            { band_album: 'Acid Age - Perilous Compulsion', points: 10 },
+            { band_album: 'Pagan Altar - Never Quite Dead', points: 10 },
+            { band_album: 'Queen of Dreams - Subnivium', points: 10 },
+            { band_album: 'Judicator - Concord', points: 8 },
+            { band_album: 'Luminesce - Mirrored', points: 8 },
+            { band_album: 'Phantom - Tyrants of Wrath', points: 8 },
+            { band_album: 'Am I in Trouble? - Spectrum', points: 6 },
+            { band_album: 'Elettra Storm - Evertale', points: 6 }
+        ]
+    },
+    { polldate: '4th December 2025',
+      ballots: 4,
+      results:
+        [
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 18 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Puteraeon - Mountains of Madness', points: 15 },
+            { band_album: 'Tormentor Tyrant - Excessive Escalation of Cruelty', points: 15 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 12 },
+            { band_album: 'Benediction - Ravage of Empires', points: 12 },
+            { band_album: 'Hirax - Faster than Death', points: 12 },
+            { band_album: 'Synaptic - Enter the Void', points: 12 },
+            { band_album: 'Acid Age - Perilous Compulsion', points: 10 },
+            { band_album: 'Ade - Supplicium', points: 10 },
+            { band_album: 'Pagan Altar - Never Quite Dead', points: 10 },
+            { band_album: 'Queen of Dreams - Subnivium', points: 10 }
+        ]
+    },
+    { polldate: '5th December 2025',
+      ballots: 4,
+      results:
+        [
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 18 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Puteraeon - Mountains of Madness', points: 15 },
+            { band_album: 'Tormentor Tyrant - Excessive Escalation of Cruelty', points: 15 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 12 },
+            { band_album: 'Benediction - Ravage of Empires', points: 12 },
+            { band_album: 'Hirax - Faster than Death', points: 12 },
+            { band_album: 'Synaptic - Enter the Void', points: 12 },
+            { band_album: 'Acid Age - Perilous Compulsion', points: 10 },
+            { band_album: 'Ade - Supplicium', points: 10 },
+            { band_album: 'Pagan Altar - Never Quite Dead', points: 10 },
+            { band_album: 'Queen of Dreams - Subnivium', points: 10 }
+        ]
+    },
+    { polldate: '6th December 2025',
+      ballots: 7,
+      results:
+        [
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 33 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 30 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Messa - The Spin', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 20 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 18 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Pestilential Shadows - Wretch', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Dynazty - Game of Faces', points: 15 },
+            { band_album: 'Grima - Nightside', points: 15 },
+            { band_album: 'Puteraeon - Mountains of Madness', points: 15 },
+            { band_album: 'Tormentor Tyrant - Excessive Escalation of Cruelty', points: 15 }
+        ]
+    },
+    { polldate: '7th December 2025',
+      ballots: 8,
+      results:
+        [
+            { band_album: 'Avantasia - Here Be Dragons', points: 55 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 33 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Messa - The Spin', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Epica - Aspiral', points: 22 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 20 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 20 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 18 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Pestilential Shadows - Wretch', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Dynazty - Game of Faces', points: 15 },
+            { band_album: 'Green Carnation - A Dark Poem Part I: The Shores of Melancholia', points: 15 }
+        ]
+    },
+    { polldate: '8th December 2025',
+      ballots: 8,
+      results:
+        [
+            { band_album: 'Avantasia - Here Be Dragons', points: 55 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 33 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Messa - The Spin', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Epica - Aspiral', points: 22 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 20 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 20 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 18 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Facerip - March of the D-Beat Demons', points: 18 },
+            { band_album: 'Pestilential Shadows - Wretch', points: 18 },
+            { band_album: 'Battle Beast - Steelbound', points: 15 },
+            { band_album: 'Cultic - Lore', points: 15 },
+            { band_album: 'Dynazty - Game of Faces', points: 15 },
+            { band_album: 'Green Carnation - A Dark Poem Part I: The Shores of Melancholia', points: 15 }
+        ]
+    },
+    { polldate: '9th December 2025',
+      ballots: 13,
+      results:
+        [
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 39 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 33 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'C4 - Payback\'s a Bitch', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Messa - The Spin', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Epica - Aspiral', points: 22 },
+            { band_album: 'Asphyxiated - Reborn in Evil', points: 18 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 18 },
+            { band_album: 'Deserted Fear - Veins of Fire', points: 18 },
+            { band_album: 'Erocis - The Sunken Lands', points: 18 }
+        ]
+    },
+    { polldate: '10th December 2025',
+      ballots: 15,
+      results:
+        [
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Messa - The Spin', points: 50 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 39 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Castle Rat - The Bestiary', points: 34 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 33 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Havukruunu - Tavastland', points: 27 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'C4 - Payback\'s a Bitch', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Epica - Aspiral', points: 22 },
+            { band_album: 'Asphyxiated - Reborn in Evil', points: 18 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 18 }
+        ]
+    },
+    { polldate: '11th December 2025',
+      ballots: 17,
+      results:
+        [
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Havukruunu - Tavastland', points: 52 },
+            { band_album: 'Messa - The Spin', points: 50 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 39 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Castle Rat - The Bestiary', points: 34 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 33 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'C4 - Payback\'s a Bitch', points: 25 },
+            { band_album: 'Hagane - Top of the Tower', points: 25 },
+            { band_album: 'Monoptera - Boundless Voyager', points: 25 },
+            { band_album: 'Retromorphosis - Psalmus Mortis', points: 25 },
+            { band_album: 'Teramaze - The Harmony Machine', points: 25 },
+            { band_album: 'Traiectorivm - Synthesis', points: 25 },
+            { band_album: 'Epica - Aspiral', points: 22 },
+            { band_album: 'Ancient Death - Ego Dissolution', points: 18 }
+        ]
+    },
+    { polldate: '12th December 2025',
+      ballots: 24,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 83 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Havukruunu - Tavastland', points: 68 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 65 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 45 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Castle Rat - The Bestiary', points: 34 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Felgrave - Otherlike Darknesses', points: 31 },
+            { band_album: 'Cadaver - Hymns of Misanthropy', points: 30 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 29 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 27 },
+            { band_album: 'Conan - Violence Dimension', points: 27 },
+            { band_album: 'Abduction - Existentialismus', points: 25 },
+            { band_album: 'Antagonizör - Edgelords from Hell', points: 25 },
+            { band_album: 'C4 - Payback\'s a Bitch', points: 25 },
+            { band_album: 'Goya - In the Dawn of November', points: 25 }
+        ]
+    },
+    { polldate: '13th December 2025',
+      ballots: 29,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 126 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 90 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Havukruunu - Tavastland', points: 68 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 53 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Castle Rat - The Bestiary', points: 34 },
+            { band_album: 'Warbringer - Wrath and Ruin', points: 33 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Felgrave - Otherlike Darknesses', points: 31 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 30 },
+            { band_album: 'Cadaver - Hymns of Misanthropy', points: 30 },
+            { band_album: 'Coroner - Dissonance Theory', points: 30 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 27 },
+            { band_album: 'Conan - Violence Dimension', points: 27 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 26 },
+            { band_album: 'Mors Principium Est - Darkness Invisible', points: 26 }
+        ]
+    },
+    { polldate: '14th December 2025',
+      ballots: 31,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 126 },
+            { band_album: 'Havukruunu - Tavastland', points: 93 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 90 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Coroner - Dissonance Theory', points: 58 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 53 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Testament - Para Bellum', points: 47 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 45 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Warbringer - Wrath and Ruin', points: 37 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Castle Rat - The Bestiary', points: 34 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 31 },
+            { band_album: 'Felgrave - Otherlike Darknesses', points: 31 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 30 },
+            { band_album: 'Cadaver - Hymns of Misanthropy', points: 30 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 27 },
+            { band_album: 'Conan - Violence Dimension', points: 27 }
+        ]
+    },
+    { polldate: '15th December 2025',
+      ballots: 37,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 126 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 108 },
+            { band_album: 'Havukruunu - Tavastland', points: 105 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Coroner - Dissonance Theory', points: 73 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 56 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 53 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 51 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 49 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 49 },
+            { band_album: 'Testament - Para Bellum', points: 47 },
+            { band_album: 'Castle Rat - The Bestiary', points: 46 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Warbringer - Wrath and Ruin', points: 37 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 37 },
+            { band_album: 'Majestica - Power Train', points: 37 },
+            { band_album: 'Ghost - Skeletá', points: 35 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 33 },
+            { band_album: 'Labÿrinth - In the Vanishing Echoes of Goodbye', points: 32 }
+        ]
+    },
+    { polldate: '16th December 2025',
+      ballots: 42,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 176 },
+            { band_album: 'Havukruunu - Tavastland', points: 120 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 108 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Coroner - Dissonance Theory', points: 73 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 61 },
+            { band_album: 'Blood Abscission - II', points: 57 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 56 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 55 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 54 },
+            { band_album: 'Castle Rat - The Bestiary', points: 54 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Lamp of Murmuur - The Dreaming Prince in Ecstasy', points: 51 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 51 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 48 },
+            { band_album: 'Epica - Aspiral', points: 48 },
+            { band_album: 'Testament - Para Bellum', points: 47 },
+            { band_album: 'Dynazty - Game of Faces', points: 40 },
+            { band_album: 'Warbringer - Wrath and Ruin', points: 37 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 37 }
+        ]
+    },
+    { polldate: '17th December 2025',
+      ballots: 45,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 176 },
+            { band_album: 'Havukruunu - Tavastland', points: 145 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 108 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 80 },
+            { band_album: 'Coroner - Dissonance Theory', points: 74 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 61 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 60 },
+            { band_album: 'Testament - Para Bellum', points: 59 },
+            { band_album: 'Blood Abscission - II', points: 57 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 56 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 55 },
+            { band_album: 'Majestica - Power Train', points: 55 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 54 },
+            { band_album: 'Castle Rat - The Bestiary', points: 54 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 52 },
+            { band_album: 'Evoken - Mendacium', points: 51 },
+            { band_album: 'Lamp of Murmuur - The Dreaming Prince in Ecstasy', points: 51 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 51 },
+            { band_album: 'Ghost - Skeletá', points: 50 },
+            { band_album: 'Epica - Aspiral', points: 48 }
+        ]
+    },
+    { polldate: '18th December 2025',
+      ballots: 56,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 186 },
+            { band_album: 'Havukruunu - Tavastland', points: 163 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 122 },
+            { band_album: 'Coroner - Dissonance Theory', points: 110 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 105 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 101 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 84 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 74 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 71 },
+            { band_album: 'Evoken - Mendacium', points: 69 },
+            { band_album: 'Blood Abscission - II', points: 67 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 66 },
+            { band_album: 'Castle Rat - The Bestiary', points: 66 },
+            { band_album: 'Majestica - Power Train', points: 65 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 64 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 62 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 61 },
+            { band_album: 'Testament - Para Bellum', points: 59 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 56 },
+            { band_album: 'Lamp of Murmuur - The Dreaming Prince in Ecstasy', points: 51 }
+        ]
+    },
+    { polldate: '19th December 2025',
+      ballots: 63,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 186 },
+            { band_album: 'Havukruunu - Tavastland', points: 163 },
+            { band_album: 'Coroner - Dissonance Theory', points: 145 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 142 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 122 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 105 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 89 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 84 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 74 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 70 },
+            { band_album: 'Evoken - Mendacium', points: 69 },
+            { band_album: 'Blood Abscission - II', points: 67 },
+            { band_album: 'Castle Rat - The Bestiary', points: 66 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 65 },
+            { band_album: 'Majestica - Power Train', points: 65 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 64 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 64 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 62 },
+            { band_album: 'Lamp of Murmuur - The Dreaming Prince in Ecstasy', points: 59 },
+            { band_album: 'Testament - Para Bellum', points: 59 }
+        ]
+    },
+    { polldate: '20th December 2025',
+      ballots: 73,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 254 },
+            { band_album: 'Havukruunu - Tavastland', points: 206 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 169 },
+            { band_album: 'Coroner - Dissonance Theory', points: 160 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 122 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 113 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 105 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 101 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 89 },
+            { band_album: 'Testament - Para Bellum', points: 85 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 85 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 84 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 72 },
+            { band_album: 'Evoken - Mendacium', points: 69 },
+            { band_album: 'Blood Abscission - II', points: 67 },
+            { band_album: 'Castle Rat - The Bestiary', points: 66 },
+            { band_album: 'Dormant Ordeal - Tooth and Nail', points: 66 },
+            { band_album: 'Majestica - Power Train', points: 65 }
+        ]
+    },
+    { polldate: '21st December 2025',
+      ballots: 78,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 279 },
+            { band_album: 'Havukruunu - Tavastland', points: 231 },
+            { band_album: 'Coroner - Dissonance Theory', points: 172 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 170 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 147 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 131 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 113 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 104 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 101 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 97 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Saor - Amidst the Ruins', points: 88 },
+            { band_album: 'Testament - Para Bellum', points: 85 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 84 },
+            { band_album: 'Evoken - Mendacium', points: 81 },
+            { band_album: 'Arkhaaik - Uihtis', points: 73 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 72 },
+            { band_album: 'Blood Abscission - II', points: 67 },
+            { band_album: 'Castle Rat - The Bestiary', points: 66 }
+        ]
+    },
+    { polldate: '22nd December 2025',
+      ballots: 85,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 314 },
+            { band_album: 'Havukruunu - Tavastland', points: 237 },
+            { band_album: 'Coroner - Dissonance Theory', points: 190 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 170 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 153 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 131 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 113 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 113 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 112 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Testament - Para Bellum', points: 110 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 97 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 90 },
+            { band_album: 'Saor - Amidst the Ruins', points: 88 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 84 },
+            { band_album: 'Scimitar - Scimitarium I', points: 84 },
+            { band_album: 'Evoken - Mendacium', points: 81 },
+            { band_album: 'Arkhaaik - Uihtis', points: 73 },
+            { band_album: 'Castle Rat - The Bestiary', points: 68 }
+        ]
+    },
+    { polldate: '23rd December 2025',
+      ballots: 95,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 354 },
+            { band_album: 'Havukruunu - Tavastland', points: 266 },
+            { band_album: 'Coroner - Dissonance Theory', points: 216 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 195 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 153 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 153 },
+            { band_album: 'Testament - Para Bellum', points: 135 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 125 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 124 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 121 },
+            { band_album: 'Scimitar - Scimitarium I', points: 119 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 116 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 112 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 97 },
+            { band_album: 'Evoken - Mendacium', points: 95 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Saor - Amidst the Ruins', points: 88 },
+            { band_album: 'Castle Rat - The Bestiary', points: 78 },
+            { band_album: 'Arkhaaik - Uihtis', points: 73 }
+        ]
+    },
+    { polldate: '24th December 2025',
+      ballots: 103,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 369 },
+            { band_album: 'Havukruunu - Tavastland', points: 277 },
+            { band_album: 'Coroner - Dissonance Theory', points: 217 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 195 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 154 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 153 },
+            { band_album: 'Scimitar - Scimitarium I', points: 152 },
+            { band_album: 'Testament - Para Bellum', points: 135 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 131 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 129 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 124 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 121 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 112 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 105 },
+            { band_album: 'Evoken - Mendacium', points: 95 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Saor - Amidst the Ruins', points: 88 },
+            { band_album: 'Arkhaaik - Uihtis', points: 79 },
+            { band_album: 'Castle Rat - The Bestiary', points: 78 }
+        ]
+    },
+    { polldate: '25th December 2025',
+      ballots: 112,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 381 },
+            { band_album: 'Havukruunu - Tavastland', points: 287 },
+            { band_album: 'Coroner - Dissonance Theory', points: 234 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 195 },
+            { band_album: 'Testament - Para Bellum', points: 170 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 158 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 153 },
+            { band_album: 'Scimitar - Scimitarium I', points: 152 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 141 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 139 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 139 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 127 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 112 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 105 },
+            { band_album: 'Arkhaaik - Uihtis', points: 104 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 96 },
+            { band_album: 'Evoken - Mendacium', points: 95 },
+            { band_album: 'Harakiri for the Sky - Scorched Earth', points: 93 },
+            { band_album: 'Cryptopsy - An Insatiable Violence', points: 91 }
+        ]
+    },
+    { polldate: '26th December 2025',
+      ballots: 119,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 431 },
+            { band_album: 'Havukruunu - Tavastland', points: 287 },
+            { band_album: 'Coroner - Dissonance Theory', points: 240 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 203 },
+            { band_album: 'Testament - Para Bellum', points: 170 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 168 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 158 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 153 },
+            { band_album: 'Scimitar - Scimitarium I', points: 153 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 141 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 139 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 129 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 123 },
+            { band_album: 'Saor - Amidst the Ruins', points: 113 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 112 },
+            { band_album: 'Evoken - Mendacium', points: 111 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Arkhaaik - Uihtis', points: 104 },
+            { band_album: 'Cryptopsy - An Insatiable Violence', points: 97 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 96 }
+        ]
+    },
+    { polldate: '27th December 2025',
+      ballots: 125,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 449 },
+            { band_album: 'Havukruunu - Tavastland', points: 287 },
+            { band_album: 'Coroner - Dissonance Theory', points: 242 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 203 },
+            { band_album: 'Testament - Para Bellum', points: 170 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 168 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 168 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 158 },
+            { band_album: 'Scimitar - Scimitarium I', points: 153 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 141 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 139 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 137 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 129 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 124 },
+            { band_album: 'Saor - Amidst the Ruins', points: 113 },
+            { band_album: 'Evoken - Mendacium', points: 112 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Arkhaaik - Uihtis', points: 104 },
+            { band_album: 'Cryptopsy - An Insatiable Violence', points: 97 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 96 }
+        ]
+    },
+    { polldate: '28th December 2025',
+      ballots: 133,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 467 },
+            { band_album: 'Havukruunu - Tavastland', points: 312 },
+            { band_album: 'Coroner - Dissonance Theory', points: 267 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 205 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 193 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 187 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 172 },
+            { band_album: 'Testament - Para Bellum', points: 171 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 170 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 157 },
+            { band_album: 'Scimitar - Scimitarium I', points: 153 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 149 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 139 },
+            { band_album: 'Evoken - Mendacium', points: 134 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 133 },
+            { band_album: 'Saor - Amidst the Ruins', points: 113 },
+            { band_album: 'Avantasia - Here Be Dragons', points: 111 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 108 },
+            { band_album: 'Arkhaaik - Uihtis', points: 104 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 103 }
+        ]
+    },
+    { polldate: '29th December 2025',
+      ballots: 149,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 467 },
+            { band_album: 'Havukruunu - Tavastland', points: 312 },
+            { band_album: 'Coroner - Dissonance Theory', points: 282 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 260 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 211 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 210 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 187 },
+            { band_album: 'Scimitar - Scimitarium I', points: 184 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 182 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 172 },
+            { band_album: 'Testament - Para Bellum', points: 171 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 157 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 152 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 143 },
+            { band_album: 'Evoken - Mendacium', points: 140 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 134 },
+            { band_album: 'Arkhaaik - Uihtis', points: 129 },
+            { band_album: 'Majestica - Power Train', points: 120 },
+            { band_album: 'Amorphis - Borderland', points: 116 },
+            { band_album: 'Saor - Amidst the Ruins', points: 113 }
+        ]
+    },
+    { polldate: '30th December 2025',
+      ballots: 183,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 635 },
+            { band_album: 'Havukruunu - Tavastland', points: 386 },
+            { band_album: 'Coroner - Dissonance Theory', points: 366 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 293 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 262 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 259 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 238 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 237 },
+            { band_album: 'Scimitar - Scimitarium I', points: 232 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 230 },
+            { band_album: 'Testament - Para Bellum', points: 215 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 199 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 187 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 187 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 159 },
+            { band_album: 'Evoken - Mendacium', points: 158 },
+            { band_album: 'Amorphis - Borderland', points: 147 },
+            { band_album: 'Ancient Death - Ego Dissolution', points: 143 },
+            { band_album: 'Paradise Lost - Ascension', points: 136 },
+            { band_album: 'Saor - Amidst the Ruins', points: 131 }
+        ]
+    },
+    { polldate: '31st December 2025',
+      ballots: 241,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 782 },
+            { band_album: 'Havukruunu - Tavastland', points: 505 },
+            { band_album: 'Coroner - Dissonance Theory', points: 460 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 411 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 334 },
+            { band_album: 'Scimitar - Scimitarium I', points: 324 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 321 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 320 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 284 },
+            { band_album: 'Testament - Para Bellum', points: 266 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 263 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 230 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 219 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 211 },
+            { band_album: 'Black Sword Thunder Attack - Black Sword Thunder Attack', points: 198 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 189 },
+            { band_album: 'Evoken - Mendacium', points: 187 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 186 },
+            { band_album: 'Ancient Death - Ego Dissolution', points: 181 },
+            { band_album: 'Amorphis - Borderland', points: 173 }
+        ]
+    },
+    { polldate: '1st January 2026',
+      ballots: 242,
+      results:
+        [
+            { band_album: 'Messa - The Spin', points: 782 },
+            { band_album: 'Havukruunu - Tavastland', points: 505 },
+            { band_album: 'Coroner - Dissonance Theory', points: 460 },
+            { band_album: 'Blut aus Nord - Ethereal Horizons', points: 411 },
+            { band_album: 'Blackbraid - Blackbraid III', points: 346 },
+            { band_album: 'Scimitar - Scimitarium I', points: 324 },
+            { band_album: 'Hooded Menace - Lachrymose Monuments of Obscuration', points: 321 },
+            { band_album: 'Deafheaven - Lonely People with Power', points: 320 },
+            { band_album: 'Teitanblood - From the Visceral Abyss', points: 284 },
+            { band_album: 'Testament - Para Bellum', points: 266 },
+            { band_album: 'Yellow Eyes - Confusion Gate', points: 263 },
+            { band_album: 'Zeicrydeus - La grande hérésie', points: 230 },
+            { band_album: 'Imperial Triumphant - Goldstar', points: 219 },
+            { band_album: 'Qrixkuor - The Womb of the World', points: 211 },
+            { band_album: 'Black Sword Thunder Attack - Black Sword Thunder Attack', points: 198 },
+            { band_album: 'Helloween - Giants &amp; Monsters', points: 189 },
+            { band_album: 'Evoken - Mendacium', points: 187 },
+            { band_album: 'One of Nine - Dawn of the Iron Shadow', points: 186 },
+            { band_album: 'Ancient Death - Ego Dissolution', points: 181 },
+            { band_album: 'Amorphis - Borderland', points: 173 }
+        ]
+    }
+];
+
+</script>
+
+<script>
+
+  create();
+
+</script>
+</html>
